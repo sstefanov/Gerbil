@@ -50,7 +50,7 @@ import serial
 ### import pdb; pdb.set_trace()
 #from pprint import pprint
 from svgpathtools import *
-#from objbrowser import browse
+from objbrowser import browse
 # to debug:  browse(locals())
 
 ### Check if inkex has errormsg (0.46 version doesnot have one.) Could be removed later.
@@ -2482,7 +2482,7 @@ def get_parent(id,c_p):
             par.append(i)
     if len(par)>0:
         i=0
-        while len(par)>1:
+        while len(par)>1 and i < len(par):
             j=0
             while len(par)>1 and j < len(par):
                 if i<>j and is_child_of(par[j],par[i],c_p):
@@ -2499,9 +2499,7 @@ def path1_is_contained_in_path2(path1, path2):
 # return -1 if boxes are not contained ot paths are crossed
 # return1 of contain
 # 0 if not
-    assert path2.isclosed()  # This question isn't well-defined otherwise
-    if path2.intersect(path1):
-        return -1
+#    assert path2.isclosed()  # This question isn't well-defined otherwise
     xmin, xmax, ymin, ymax = path2.bbox()
 # trivial cases
     xmin1, xmax1, ymin1, ymax1 = path1.bbox()
@@ -2514,6 +2512,11 @@ def path1_is_contained_in_path2(path1, path2):
     if ymax < ymin1:
         return -1
 
+    if path2.intersect(path1):
+        return -1
+# faster but not accurate
+#    if xmin1>xmin and xmax1<xmax and ymin1>ymin and ymax1<ymax:
+#        return 1
     # find a point that's definitely outside path2
     B = (xmin + 1) + 1j*(ymax + 1)
     A = path1.start  # pick an arbitrary point in path1
@@ -2532,6 +2535,10 @@ def contain_matrix (subpaths,attr):
     global print_
     global print_a
     c_p=[]
+    time_ = time.time()
+    time_start  = time_
+    print_("contain_matrix %s"% time_)
+
     for i in range(len(subpaths)):
         c_p.append([])
         for j in range(len(subpaths)):
@@ -2540,10 +2547,14 @@ def contain_matrix (subpaths,attr):
                 c_p[i].append(-1)
             else:
                 c_p[i].append(0)
-    print_a (c_p)
+#    print_a (c_p)
+    time1 = time.time()
     for i in range(len(subpaths)):
         for j in range(len(subpaths)):
             if c_p[j][i] == 0 :
+                print_ ("j = %s,  i = %s, time=%s" % (j,i, time.time() - time1))
+                time1 = time.time()
+#                print_("j=" + str(j) + ", i=" + str(i) + " " + attr[j])
                 cont=path1_is_contained_in_path2(subpaths[j],subpaths[i])
                 if cont==-1:
                     c_p[i][j]=-1   # don't check opposite again
@@ -2556,6 +2567,8 @@ def contain_matrix (subpaths,attr):
                             if c_p[k][j]==1:
                                 c_p[k][i]=1
                                 c_p[i][k]=-1
+    time_ = time.time()
+    print_("contain_matrix ended %s, duration %s"% (time_, time_- time_start))
     return c_p
 
 def contains_paths(c_p):
